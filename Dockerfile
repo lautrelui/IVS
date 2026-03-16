@@ -9,7 +9,7 @@ RUN npm install --omit=dev
 # Copy application
 COPY src/ ./src/
 COPY public/ ./public/
-COPY keys/ ./keys/
+RUN mkdir -p ./keys
 
 # Non-root user
 RUN addgroup -g 1001 ivs && adduser -u 1001 -G ivs -s /bin/sh -D ivs
