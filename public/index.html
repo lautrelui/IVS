@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MTN IVS - Monitoring Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+  <!-- Login Screen -->
+  <div id="login-screen" class="login-screen">
+    <div class="login-card">
+      <div class="login-logo">
+        <div class="logo-icon">
+          <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="40" height="40" rx="10" fill="url(#grad1)"/>
+            <path d="M12 20L18 14L24 20L30 14" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 26L18 20L24 26L30 20" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
+            <defs>
+              <linearGradient id="grad1" x1="0" y1="0" x2="40" y2="40">
+                <stop offset="0%" stop-color="#6366f1"/>
+                <stop offset="100%" stop-color="#8b5cf6"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <h1>MTN IVS</h1>
+        <p class="login-subtitle">Identifier Verification Service</p>
+      </div>
+      <form id="login-form">
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username" required autocomplete="username" placeholder="Enter username">
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="Enter password">
+        </div>
+        <div id="login-error" class="login-error" style="display:none"></div>
+        <button type="submit" class="btn-login">Sign In</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Dashboard -->
+  <div id="dashboard" class="dashboard" style="display:none">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-small">
+          <svg viewBox="0 0 32 32" fill="none">
+            <rect width="32" height="32" rx="8" fill="url(#grad2)"/>
+            <path d="M10 16L14 12L18 16L22 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M10 21L14 17L18 21L22 17" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
+            <defs>
+              <linearGradient id="grad2" x1="0" y1="0" x2="32" y2="32">
+                <stop offset="0%" stop-color="#6366f1"/>
+                <stop offset="100%" stop-color="#8b5cf6"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <span class="sidebar-title">IVS Monitor</span>
+      </div>
+      <ul class="sidebar-nav">
+        <li class="nav-item active" data-view="overview">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          <span>Overview</span>
+        </li>
+        <li class="nav-item" data-view="requests">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/></svg>
+          <span>Live Requests</span>
+        </li>
+        <li class="nav-item" data-view="connectors">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          <span>Connectors</span>
+        </li>
+        <li class="nav-item" data-view="audit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          <span>Audit Log</span>
+        </li>
+      </ul>
+      <div class="sidebar-footer">
+        <button id="logout-btn" class="btn-logout">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span>Sign Out</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Top Bar -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <h2 id="view-title">Overview</h2>
+          <span class="instance-badge" id="instance-id">IVS-MTN-01</span>
+        </div>
+        <div class="topbar-right">
+          <div class="status-indicator" id="status-indicator">
+            <span class="status-dot"></span>
+            <span class="status-text">Connected</span>
+          </div>
+          <span class="uptime" id="uptime">--</span>
+        </div>
+      </header>
+
+      <!-- Overview View -->
+      <div id="view-overview" class="view active">
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon blue">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/></svg>
+            </div>
+            <div class="stat-info">
+              <span class="stat-value" id="stat-total">0</span>
+              <span class="stat-label">Total Requests</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon green">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            </div>
+            <div class="stat-info">
+              <span class="stat-value" id="stat-verified">0</span>
+              <span class="stat-label">Verified</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon orange">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </div>
+            <div class="stat-info">
+              <span class="stat-value" id="stat-notfound">0</span>
+              <span class="stat-label">Not Found</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon red">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            </div>
+            <div class="stat-info">
+              <span class="stat-value" id="stat-errors">0</span>
+              <span class="stat-label">Errors</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="charts-row">
+          <div class="chart-card wide">
+            <div class="card-header">
+              <h3>Request Volume</h3>
+              <span class="card-badge">Last 60 min</span>
+            </div>
+            <div class="chart-container">
+              <canvas id="chart-timeline"></canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <div class="card-header">
+              <h3>Status Distribution</h3>
+            </div>
+            <div class="chart-container donut-container">
+              <canvas id="chart-status"></canvas>
+              <div class="donut-center" id="donut-center">
+                <span class="donut-value">0</span>
+                <span class="donut-label">Total</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom Row -->
+        <div class="charts-row">
+          <div class="chart-card">
+            <div class="card-header">
+              <h3>Identifier Types</h3>
+            </div>
+            <div class="type-bars" id="type-bars"></div>
+          </div>
+          <div class="chart-card">
+            <div class="card-header">
+              <h3>Performance</h3>
+            </div>
+            <div class="perf-stats">
+              <div class="perf-item">
+                <span class="perf-label">Avg Response</span>
+                <span class="perf-value" id="perf-avg">-- ms</span>
+              </div>
+              <div class="perf-item">
+                <span class="perf-label">P95 Response</span>
+                <span class="perf-value" id="perf-p95">-- ms</span>
+              </div>
+              <div class="perf-item">
+                <span class="perf-label">Verify Calls</span>
+                <span class="perf-value" id="perf-verify">0</span>
+              </div>
+              <div class="perf-item">
+                <span class="perf-label">Protect Calls</span>
+                <span class="perf-value" id="perf-protect">0</span>
+              </div>
+            </div>
+          </div>
+          <div class="chart-card">
+            <div class="card-header">
+              <h3>Countries</h3>
+            </div>
+            <div class="country-list" id="country-list">
+              <div class="empty-state">No data yet</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Requests View -->
+      <div id="view-requests" class="view">
+        <div class="table-card">
+          <div class="card-header">
+            <h3>Recent Verification Requests</h3>
+            <span class="card-badge live-badge">
+              <span class="live-dot"></span> Live
+            </span>
+          </div>
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Correlation ID</th>
+                  <th>Type</th>
+                  <th>Country</th>
+                  <th>Status</th>
+                  <th>Masked Value</th>
+                  <th>Response</th>
+                  <th>Gateway</th>
+                </tr>
+              </thead>
+              <tbody id="requests-table-body">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Connectors View -->
+      <div id="view-connectors" class="view">
+        <div class="connectors-grid" id="connectors-grid">
+        </div>
+      </div>
+
+      <!-- Audit View -->
+      <div id="view-audit" class="view">
+        <div class="table-card">
+          <div class="card-header">
+            <h3>Audit Events</h3>
+            <div class="audit-filters">
+              <select id="audit-filter" class="filter-select">
+                <option value="">All Events</option>
+                <option value="VERIFY_REQUEST_RECEIVED">Verify Received</option>
+                <option value="IDENTIFIER_NORMALIZED">Normalized</option>
+                <option value="CONNECTOR_CALL_STARTED">Connector Started</option>
+                <option value="CONNECTOR_CALL_SUCCEEDED">Connector Success</option>
+                <option value="CONNECTOR_CALL_FAILED">Connector Failed</option>
+                <option value="CLAIM_ISSUED_VERIFIED">Claim Verified</option>
+                <option value="CLAIM_ISSUED_PROTECTED_ONLY">Claim Protected</option>
+                <option value="VERIFY_REJECTED_INVALID_FORMAT">Invalid Format</option>
+                <option value="VERIFY_RESULT_NOT_FOUND">Not Found</option>
+                <option value="VERIFY_RESULT_INCONCLUSIVE">Inconclusive</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Event Type</th>
+                  <th>Correlation ID</th>
+                  <th>Identifier Type</th>
+                  <th>Status</th>
+                  <th>Details</th>
+                </tr>
+              </thead>
+              <tbody id="audit-table-body">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="js/dashboard.js"></script>
+</body>
+</html>
