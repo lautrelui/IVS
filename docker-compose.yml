@@ -10,7 +10,7 @@ services:
       - PORT=3011
       - NODE_ENV=production
       - ADMIN_USERNAME=admin
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-Admin2026!Secure}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
       - JWT_SECRET=${JWT_SECRET:-change-this-jwt-secret-in-production}
       - API_KEYS=${API_KEYS:-cvg-api-key-change-me}
       - HMAC_KEY=${HMAC_KEY:-Y2hhbmdlLXRoaXMtaG1hYy1rZXktaW4tcHJvZHVjdGlvbi1taW5pbXVtLTI1Ni1iaXQ=}

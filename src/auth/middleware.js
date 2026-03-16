@@ -65,10 +65,16 @@ async function login(req, res) {
     { expiresIn: '8h' }
   );
 
+  // Only set Secure flag when behind HTTPS (controlled via COOKIE_SECURE env).
+  // Browsers silently drop Secure cookies over plain HTTP, breaking login.
+  const isSecure = process.env.COOKIE_SECURE === 'true' ||
+    (req.protocol === 'https') ||
+    (req.headers['x-forwarded-proto'] === 'https');
+
   res.cookie('ivs_session', token, {
     httpOnly: true,
-    secure: config.nodeEnv === 'production',
-    sameSite: 'strict',
+    secure: isSecure,
+    sameSite: 'lax',
     maxAge: config.auth.sessionMaxAge,
   });
 
