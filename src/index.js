@@ -62,11 +62,8 @@ app.get('/auth/check', sessionAuth, (req, res) => {
   res.json({ status: 'ok', user: req.user });
 });
 
-// Dashboard static files
-app.use('/dashboard', express.static(path.join(__dirname, '..', 'public')));
-
-// Redirect root to dashboard
-app.get('/', (_req, res) => res.redirect('/dashboard'));
+// Dashboard static files — served at root since this is a dedicated service on port 3011
+app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // 404
 app.use((_req, res) => {
