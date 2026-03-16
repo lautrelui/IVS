@@ -17,6 +17,7 @@ const app = express();
 // Security
 app.use(helmet({
   contentSecurityPolicy: {
+    useDefaults: false,
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", "'unsafe-inline'"],
@@ -26,6 +27,10 @@ app.use(helmet({
       connectSrc: ["'self'"],
     },
   },
+  // Disable HSTS — service runs over HTTP, not behind HTTPS termination by default
+  strictTransportSecurity: false,
+  // Allow same-origin and cross-origin resource loading for static assets
+  crossOriginResourcePolicy: { policy: 'same-site' },
 }));
 app.use(cookieParser());
 app.use(express.json({ limit: '1mb' }));
