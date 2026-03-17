@@ -4,19 +4,18 @@
  */
 
 const normalizers = {
-  NIU: (rawValue, issuerCountry) => {
+  NIU: (rawValue, _issuerCountry) => {
     let value = rawValue.trim();
     // Remove spaces and non-semantic dashes
     value = value.replace(/[\s-]/g, '');
-    // Validate: NIU should be numeric and have expected length (13 digits for CG)
-    if (!/^\d+$/.test(value)) {
-      return { normalized: null, valid: false, error: 'NIU must contain only digits' };
+    // Uppercase for consistent matching
+    value = value.toUpperCase();
+    // NIU is alphanumeric (e.g. P24000000544639E)
+    if (!/^[A-Z0-9]+$/.test(value)) {
+      return { normalized: null, valid: false, error: 'NIU must be alphanumeric' };
     }
-    if (issuerCountry === 'CG' && value.length !== 13) {
-      return { normalized: null, valid: false, error: `NIU for CG must be 13 digits, got ${value.length}` };
-    }
-    if (value.length < 8 || value.length > 20) {
-      return { normalized: null, valid: false, error: `NIU length ${value.length} outside valid range (8-20)` };
+    if (value.length < 8 || value.length > 25) {
+      return { normalized: null, valid: false, error: `NIU length ${value.length} outside valid range (8-25)` };
     }
     return { normalized: value, valid: true };
   },
