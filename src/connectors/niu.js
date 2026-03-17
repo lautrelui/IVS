@@ -183,8 +183,7 @@ class NiuConnector extends BaseConnector {
 
     // full_name: use explicit field or derive from first + last
     const explicit = pick(
-      'full_name', 'fullName', 'nom_complet', 'nomComplet', 'name',
-      'displayName', 'display_name',
+      'full_name', 'fullName', 'nom_complet', 'nomComplet',
     ).toUpperCase();
     if (explicit) {
       attrs.full_name = explicit;
