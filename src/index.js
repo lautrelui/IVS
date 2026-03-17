@@ -11,6 +11,7 @@ const verifyRoutes = require('./routes/verify');
 const protectRoutes = require('./routes/protect');
 const healthRoutes = require('./routes/health');
 const monitoringRoutes = require('./routes/monitoring');
+const claimsRoutes = require('./routes/claims');
 
 const app = express();
 
@@ -56,6 +57,7 @@ app.use('/api/v1/identifiers/protect', apiLimiter, protectRoutes);
 app.use('/api/v1/health', healthRoutes);
 app.use('/api/v1/connectors/health', healthRoutes);
 app.use('/api/v1/monitoring', monitoringRoutes);
+app.use('/api/v1/claims', claimsRoutes);
 
 // Auth routes
 app.post('/auth/login', loginLimiter, login);
