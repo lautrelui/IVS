@@ -284,8 +284,10 @@
   function drawTimeline(series) {
     const canvas = document.getElementById('chart-timeline');
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
     const rect = canvas.parentElement.getBoundingClientRect();
+    // Skip drawing when canvas is hidden (zero dimensions)
+    if (rect.width < 1 || rect.height < 1) return;
+    const ctx = canvas.getContext('2d');
     canvas.width = rect.width * 2;
     canvas.height = rect.height * 2;
     canvas.style.width = rect.width + 'px';
@@ -353,8 +355,10 @@
   function drawDonut(results) {
     const canvas = document.getElementById('chart-status');
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
     const rect = canvas.parentElement.getBoundingClientRect();
+    // Skip drawing when canvas is hidden (zero dimensions cause negative radius → RangeError)
+    if (rect.width < 1 || rect.height < 1) return;
+    const ctx = canvas.getContext('2d');
     canvas.width = rect.width * 2;
     canvas.height = rect.height * 2;
     canvas.style.width = rect.width + 'px';
