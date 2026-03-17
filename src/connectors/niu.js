@@ -52,14 +52,15 @@ class NiuConnector extends BaseConnector {
         // Successful verification — normalize demographic attributes.
         // The registry may nest attributes under body.data, body.data.attributes,
         // body.result, or return them at the top level of body itself.
-        const rawAttrs = body.data?.attributes || body.data || body.result || body;
+        const rawAttrs = body.data?.data || body.data?.attributes || body.data || body.result || body;
 
         // Log the raw keys so we can diagnose field-name mismatches
         logger.info('[NIU_CONNECTOR] Registry data keys', {
           correlation_id: correlationId,
           data_keys: body.data ? Object.keys(body.data) : null,
-          nested_keys: body.data?.attributes ? Object.keys(body.data.attributes) : null,
-          top_level_keys: Object.keys(body).filter(k => k !== 'ok' && k !== 'message' && k !== 'data'),
+          nested_data_keys: body.data?.data ? Object.keys(body.data.data).slice(0, 15) : null,
+          nested_attr_keys: body.data?.attributes ? Object.keys(body.data.attributes) : null,
+          raw_attrs_keys: rawAttrs ? Object.keys(rawAttrs).slice(0, 15) : null,
         });
 
         const confirmedAttributes = this._normalizeAttributes(rawAttrs);
@@ -183,6 +184,7 @@ class NiuConnector extends BaseConnector {
     // full_name: use explicit field or derive from first + last
     const explicit = pick(
       'full_name', 'fullName', 'nom_complet', 'nomComplet', 'name',
+      'displayName', 'display_name',
     ).toUpperCase();
     if (explicit) {
       attrs.full_name = explicit;
@@ -239,8 +241,8 @@ class NiuConnector extends BaseConnector {
     // Already ISO date
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
 
-    // ISO datetime — extract date part
-    if (/^\d{4}-\d{2}-\d{2}T/.test(s)) return s.slice(0, 10);
+    // ISO datetime (T or space separator) — extract date part
+    if (/^\d{4}-\d{2}-\d{2}[T ]/.test(s)) return s.slice(0, 10);
 
     // DD/MM/YYYY or DD-MM-YYYY
     const dmyMatch = s.match(/^(\d{2})[/\-.](\d{2})[/\-.](\d{4})$/);
