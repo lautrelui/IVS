@@ -49,8 +49,20 @@ class NiuConnector extends BaseConnector {
       });
 
       if (body.ok === true && response.status >= 200 && response.status < 300) {
-        // Successful verification — normalize demographic attributes
-        const confirmedAttributes = this._normalizeAttributes(body.data || {});
+        // Successful verification — normalize demographic attributes.
+        // The registry may nest attributes under body.data, body.data.attributes,
+        // body.result, or return them at the top level of body itself.
+        const rawAttrs = body.data?.attributes || body.data || body.result || body;
+
+        // Log the raw keys so we can diagnose field-name mismatches
+        logger.info('[NIU_CONNECTOR] Registry data keys', {
+          correlation_id: correlationId,
+          data_keys: body.data ? Object.keys(body.data) : null,
+          nested_keys: body.data?.attributes ? Object.keys(body.data.attributes) : null,
+          top_level_keys: Object.keys(body).filter(k => k !== 'ok' && k !== 'message' && k !== 'data'),
+        });
+
+        const confirmedAttributes = this._normalizeAttributes(rawAttrs);
 
         this.stats.verified++;
         this.healthy = true;
@@ -137,17 +149,41 @@ class NiuConnector extends BaseConnector {
    *   placeOfBirth / lieu_naissance → place_of_birth (trimmed)
    */
   _normalizeAttributes(data) {
+    if (!data || typeof data !== 'object') return {};
+
+    // Build a case-insensitive lookup so we catch any casing variant
+    const lc = {};
+    for (const [k, v] of Object.entries(data)) {
+      if (v != null && v !== '') lc[k.toLowerCase()] = v;
+    }
+
+    const pick = (...keys) => {
+      for (const k of keys) {
+        const v = lc[k.toLowerCase()];
+        if (v != null && String(v).trim() !== '') return String(v).trim();
+      }
+      return '';
+    };
+
     const attrs = {};
 
     // --- Name fields ---
-    const givenNames = (data.givennames || data.prenom || data.first_name || '').trim().toUpperCase();
-    const surnames = (data.surnames || data.nom || data.last_name || '').trim().toUpperCase();
+    const givenNames = pick(
+      'givennames', 'givenNames', 'prenom', 'prénom', 'prénoms',
+      'first_name', 'firstName', 'prenoms',
+    ).toUpperCase();
+    const surnames = pick(
+      'surnames', 'surNames', 'nom', 'last_name', 'lastName',
+      'family_name', 'familyName', 'noms',
+    ).toUpperCase();
 
     if (givenNames) attrs.first_name = givenNames;
     if (surnames) attrs.last_name = surnames;
 
     // full_name: use explicit field or derive from first + last
-    const explicit = (data.full_name || '').trim().toUpperCase();
+    const explicit = pick(
+      'full_name', 'fullName', 'nom_complet', 'nomComplet', 'name',
+    ).toUpperCase();
     if (explicit) {
       attrs.full_name = explicit;
     } else if (givenNames && surnames) {
@@ -156,30 +192,36 @@ class NiuConnector extends BaseConnector {
       attrs.full_name = givenNames || surnames;
     }
 
-    // If we have full_name but not first/last, leave them as-is (don't guess the split)
-
     // --- Date of birth → ISO YYYY-MM-DD ---
-    const rawDob = data.dateOfBirth || data.date_of_birth || data.date_naissance || '';
+    const rawDob = pick(
+      'dateOfBirth', 'date_of_birth', 'date_naissance', 'dateNaissance',
+      'dob', 'birthDate', 'birth_date', 'birthday',
+    );
     if (rawDob) {
       attrs.date_of_birth = this._normalizeDate(rawDob);
     }
 
     // --- Sex ---
-    const rawSex = (data.sex || data.sexe || '').trim().toUpperCase();
+    const rawSex = pick('sex', 'sexe', 'gender', 'genre').toUpperCase();
     if (rawSex) {
       attrs.sex = rawSex === 'MASCULIN' || rawSex === 'MALE' ? 'M'
         : rawSex === 'FEMININ' || rawSex === 'FEMALE' || rawSex === 'FÉMININ' ? 'F'
-          : rawSex; // already M/F or other code
+          : rawSex;
     }
 
     // --- Nationality ---
-    const rawNat = (data.nationality || data.nationalite || data.nationalité || '').trim().toUpperCase();
+    const rawNat = pick(
+      'nationality', 'nationalite', 'nationalité', 'citizenShip', 'citizenship',
+    ).toUpperCase();
     if (rawNat) {
       attrs.nationality = rawNat;
     }
 
     // --- Place of birth ---
-    const rawPob = (data.placeOfBirth || data.place_of_birth || data.lieu_naissance || '').trim();
+    const rawPob = pick(
+      'placeOfBirth', 'place_of_birth', 'lieu_naissance', 'lieuNaissance',
+      'birthPlace', 'birth_place',
+    );
     if (rawPob) {
       attrs.place_of_birth = rawPob.toUpperCase();
     }
