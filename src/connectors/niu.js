@@ -49,19 +49,8 @@ class NiuConnector extends BaseConnector {
       });
 
       if (body.ok === true && response.status >= 200 && response.status < 300) {
-        // Successful verification
-        const confirmedAttributes = {};
-        if (body.data) {
-          if (body.data.full_name || body.data.nom) {
-            confirmedAttributes.full_name = (body.data.full_name || body.data.nom || '').toUpperCase();
-          }
-          if (body.data.date_of_birth || body.data.date_naissance) {
-            confirmedAttributes.date_of_birth = body.data.date_of_birth || body.data.date_naissance;
-          }
-          if (body.data.address || body.data.adresse) {
-            confirmedAttributes.address = body.data.address || body.data.adresse;
-          }
-        }
+        // Successful verification — normalize demographic attributes
+        const confirmedAttributes = this._normalizeAttributes(body.data || {});
 
         this.stats.verified++;
         this.healthy = true;
@@ -134,6 +123,92 @@ class NiuConnector extends BaseConnector {
         source_registry: 'NIU',
       };
     }
+  }
+
+  /**
+   * Normalize demographic attributes returned by the NIU registry.
+   * Registry fields (French or English) are mapped to a canonical schema:
+   *   givennames / prenom   → first_name
+   *   surnames  / nom       → last_name
+   *   full_name (or derived) → full_name = first_name + " " + last_name
+   *   dateOfBirth / date_naissance → date_of_birth (ISO YYYY-MM-DD)
+   *   sex / sexe            → sex (M/F)
+   *   nationality / nationalite → nationality (as-is, e.g. ISO alpha-3)
+   *   placeOfBirth / lieu_naissance → place_of_birth (trimmed)
+   */
+  _normalizeAttributes(data) {
+    const attrs = {};
+
+    // --- Name fields ---
+    const givenNames = (data.givennames || data.prenom || data.first_name || '').trim().toUpperCase();
+    const surnames = (data.surnames || data.nom || data.last_name || '').trim().toUpperCase();
+
+    if (givenNames) attrs.first_name = givenNames;
+    if (surnames) attrs.last_name = surnames;
+
+    // full_name: use explicit field or derive from first + last
+    const explicit = (data.full_name || '').trim().toUpperCase();
+    if (explicit) {
+      attrs.full_name = explicit;
+    } else if (givenNames && surnames) {
+      attrs.full_name = `${givenNames} ${surnames}`;
+    } else if (givenNames || surnames) {
+      attrs.full_name = givenNames || surnames;
+    }
+
+    // If we have full_name but not first/last, leave them as-is (don't guess the split)
+
+    // --- Date of birth → ISO YYYY-MM-DD ---
+    const rawDob = data.dateOfBirth || data.date_of_birth || data.date_naissance || '';
+    if (rawDob) {
+      attrs.date_of_birth = this._normalizeDate(rawDob);
+    }
+
+    // --- Sex ---
+    const rawSex = (data.sex || data.sexe || '').trim().toUpperCase();
+    if (rawSex) {
+      attrs.sex = rawSex === 'MASCULIN' || rawSex === 'MALE' ? 'M'
+        : rawSex === 'FEMININ' || rawSex === 'FEMALE' || rawSex === 'FÉMININ' ? 'F'
+          : rawSex; // already M/F or other code
+    }
+
+    // --- Nationality ---
+    const rawNat = (data.nationality || data.nationalite || data.nationalité || '').trim().toUpperCase();
+    if (rawNat) {
+      attrs.nationality = rawNat;
+    }
+
+    // --- Place of birth ---
+    const rawPob = (data.placeOfBirth || data.place_of_birth || data.lieu_naissance || '').trim();
+    if (rawPob) {
+      attrs.place_of_birth = rawPob.toUpperCase();
+    }
+
+    return attrs;
+  }
+
+  /**
+   * Attempt to coerce a date string into ISO YYYY-MM-DD.
+   * Handles: YYYY-MM-DD, DD/MM/YYYY, DD-MM-YYYY, YYYYMMDD, ISO 8601 datetime.
+   */
+  _normalizeDate(raw) {
+    const s = raw.trim();
+
+    // Already ISO date
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+
+    // ISO datetime — extract date part
+    if (/^\d{4}-\d{2}-\d{2}T/.test(s)) return s.slice(0, 10);
+
+    // DD/MM/YYYY or DD-MM-YYYY
+    const dmyMatch = s.match(/^(\d{2})[/\-.](\d{2})[/\-.](\d{4})$/);
+    if (dmyMatch) return `${dmyMatch[3]}-${dmyMatch[2]}-${dmyMatch[1]}`;
+
+    // YYYYMMDD
+    if (/^\d{8}$/.test(s)) return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`;
+
+    // Fallback: return as-is
+    return s;
   }
 
   async healthCheck() {

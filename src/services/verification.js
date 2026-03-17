@@ -117,7 +117,9 @@ async function verifyIdentifier(request) {
     correlation_id,
   };
 
-  if (options?.return_confirmed_attributes && connectorResult.confirmed_attributes) {
+  // Always include confirmed_attributes for verified claims when the registry
+  // returned demographic data — these are part of the signed claim payload.
+  if (connectorResult.confirmed_attributes && Object.keys(connectorResult.confirmed_attributes).length > 0) {
     claim.confirmed_attributes = connectorResult.confirmed_attributes;
   }
 
