@@ -18,7 +18,7 @@ services:
       - SIGNING_KEY=${SIGNING_KEY:-Y2hhbmdlLXRoaXMtc2lnbmluZy1rZXktaW4tcHJvZHVjdGlvbg==}
       - SIGNING_KEY_VERSION=v1
       - NIU_API_URL=https://api.egovwallet.com/api/kyc/verify
-      - NIU_API_TIMEOUT=10000
+      - NIU_API_TIMEOUT=30000
       - IVS_INSTANCE_ID=IVS-MTN-01
       - TRUSTED_GATEWAYS=CVG-CTI-01
     restart: unless-stopped

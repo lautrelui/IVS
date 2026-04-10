@@ -31,7 +31,7 @@ const config = {
 
   niu: {
     apiUrl: process.env.NIU_API_URL || 'https://api.egovwallet.com/api/kyc/verify',
-    apiTimeout: parseInt(process.env.NIU_API_TIMEOUT || '10000', 10),
+    apiTimeout: parseInt(process.env.NIU_API_TIMEOUT || '30000', 10),
   },
 
   ivsInstanceId: process.env.IVS_INSTANCE_ID || 'IVS-MTN-01',
