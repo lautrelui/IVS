@@ -4,8 +4,7 @@ services:
   ivs:
     build: .
     container_name: mtn-ivs
-    ports:
-      - "3011:3011"
+    network_mode: host
     environment:
       - PORT=3011
       - NODE_ENV=production
