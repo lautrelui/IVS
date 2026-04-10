@@ -1,0 +1,576 @@
+openapi: 3.0.3
+info:
+  title: MTN Identifier Verification Service (IVS)
+  description: |
+    Secure identifier verification, normalization, HMAC-protected representation
+    generation, and signed claim issuance.
+
+    **Consumers:** CTI Verification Gateway (CVG) and authorized internal services.
+
+    **Security:** All mutating/verification endpoints require an API key via the
+    `X-API-Key` header.  The monitoring dashboard uses session-cookie auth.
+  version: 1.0.0
+  contact:
+    name: MTN IVS Team
+
+servers:
+  - url: http://localhost:3011
+    description: Local / Docker
+
+# ---------------------------------------------------------------------------
+# Security schemes
+# ---------------------------------------------------------------------------
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+  # -----------------------------------------------------------------------
+  # Reusable schemas
+  # -----------------------------------------------------------------------
+  schemas:
+
+    # -- Request bodies --
+
+    VerifyRequest:
+      type: object
+      required: [correlation_id, identifier]
+      properties:
+        correlation_id:
+          type: string
+          example: "cvg-20260316-000771"
+        identifier:
+          $ref: '#/components/schemas/IdentifierInput'
+        source_context:
+          $ref: '#/components/schemas/SourceContext'
+        options:
+          type: object
+          properties:
+            allow_protection_without_registry:
+              type: boolean
+              default: false
+
+    ProtectRequest:
+      type: object
+      required: [correlation_id, identifier]
+      properties:
+        correlation_id:
+          type: string
+          example: "cvg-20260316-000772"
+        identifier:
+          $ref: '#/components/schemas/IdentifierInput'
+
+    ClaimVerifyRequest:
+      type: object
+      required: [claim]
+      properties:
+        claim:
+          type: object
+          required: [signature]
+          description: A previously issued signed claim object.
+          properties:
+            claim_id:
+              type: string
+            verification_status:
+              type: string
+            signature:
+              type: string
+            signature_key_version:
+              type: string
+
+    # -- Shared fragments --
+
+    IdentifierInput:
+      type: object
+      required: [identifier_type, raw_value, issuer_country]
+      properties:
+        identifier_type:
+          type: string
+          enum: [NIU, PASSPORT, NID, DRIVER_LICENSE]
+          example: NIU
+        raw_value:
+          type: string
+          description: Raw identifier value (never logged or stored).
+          example: "P24000000544639E"
+        issuer_country:
+          type: string
+          example: CG
+
+    SourceContext:
+      type: object
+      properties:
+        requesting_assujetti_id:
+          type: string
+          example: BGFI
+        onebox_id:
+          type: string
+          example: OBX-BGFI-01
+        gateway_id:
+          type: string
+          example: CVG-CTI-01
+        local_request_ref:
+          type: string
+        purpose:
+          type: string
+          example: kyc_verification
+
+    # -- Claim payloads --
+
+    VerifiedClaim:
+      type: object
+      description: Signed claim issued after successful registry verification.
+      required:
+        - claim_id
+        - claim_type
+        - verification_status
+        - identifier_type
+        - identifier_hmac
+        - identifier_hmac_key_version
+        - masked_value
+        - fingerprint
+        - issuer_country
+        - source_registry
+        - verified_at
+        - verified_by
+        - normalization_version
+        - policy_version
+        - correlation_id
+        - signature
+        - signature_key_version
+      properties:
+        claim_id:
+          type: string
+          pattern: '^ivs-[0-9a-f-]{36}$'
+          example: "ivs-550e8400-e29b-41d4-a716-446655440000"
+        claim_type:
+          type: string
+          enum: [IDENTIFIER_VERIFIED, IDENTIFIER_CHECK_RESULT]
+        verification_status:
+          type: string
+          enum: [verified, not_found, invalid, registry_unavailable, inconclusive]
+        identifier_type:
+          type: string
+          enum: [NIU, PASSPORT, NID, DRIVER_LICENSE]
+        identifier_hmac:
+          type: string
+          description: Base64-encoded HMAC of TYPE|COUNTRY|NORMALIZED_VALUE.
+        identifier_hmac_key_version:
+          type: string
+        masked_value:
+          type: string
+          description: "Identifier masked except last 4 chars (e.g. ***********639E)."
+        fingerprint:
+          type: string
+          description: First 16 hex chars of SHA-256 of TYPE|COUNTRY|NORMALIZED_VALUE.
+        issuer_country:
+          type: string
+        source_registry:
+          type: string
+          example: NIU
+        verified_at:
+          type: string
+          format: date-time
+        verified_by:
+          type: string
+          example: IVS-MTN-01
+        normalization_version:
+          type: string
+          example: v1
+        policy_version:
+          type: string
+          example: v1
+        correlation_id:
+          type: string
+        confirmed_attributes:
+          type: object
+          description: Normalized demographic attributes returned by the registry (present when verification_status is "verified").
+          properties:
+            first_name:
+              type: string
+              description: "Given names, uppercased."
+              example: ALEXIS ABDALA
+            last_name:
+              type: string
+              description: "Surname(s), uppercased."
+              example: EMEDI
+            full_name:
+              type: string
+              description: "first_name + ' ' + last_name, derived (never from displayName)."
+              example: ALEXIS ABDALA EMEDI
+            date_of_birth:
+              type: string
+              description: "ISO YYYY-MM-DD format."
+              example: "1995-05-08"
+            sex:
+              type: string
+              enum: [M, F]
+              description: "Normalized from MASCULIN/MALE→M, FEMININ/FEMALE→F."
+            nationality:
+              type: string
+              description: "As returned by registry, uppercased."
+              example: CONGOLAISE
+            place_of_birth:
+              type: string
+              description: "Uppercased."
+              example: BRAZZAVILLE
+        registry_message:
+          type: string
+          description: Optional message from the registry (present for non-verified outcomes).
+        signature:
+          type: string
+          description: HS512 JWT signature over the claim payload.
+        signature_key_version:
+          type: string
+          example: v1
+
+    ProtectedOnlyClaim:
+      type: object
+      description: Claim issued when protection-only mode is used (no registry call).
+      required:
+        - claim_id
+        - claim_type
+        - verification_status
+        - identifier_type
+        - identifier_hmac
+        - identifier_hmac_key_version
+        - masked_value
+        - fingerprint
+        - issuer_country
+        - protected_at
+        - protected_by
+        - normalization_version
+        - policy_version
+        - correlation_id
+        - signature
+        - signature_key_version
+      properties:
+        claim_id:
+          type: string
+        claim_type:
+          type: string
+          enum: [IDENTIFIER_PROTECTED_ONLY]
+        verification_status:
+          type: string
+          enum: [protected_only]
+        identifier_type:
+          type: string
+        identifier_hmac:
+          type: string
+        identifier_hmac_key_version:
+          type: string
+        masked_value:
+          type: string
+        fingerprint:
+          type: string
+        issuer_country:
+          type: string
+        protected_at:
+          type: string
+          format: date-time
+        protected_by:
+          type: string
+        normalization_version:
+          type: string
+        policy_version:
+          type: string
+        correlation_id:
+          type: string
+        signature:
+          type: string
+        signature_key_version:
+          type: string
+
+    # -- Response envelopes --
+
+    VerifySuccessResponse:
+      type: object
+      required: [status, claim, correlation_id, response_time_ms]
+      properties:
+        status:
+          type: string
+          enum: [success]
+        claim:
+          $ref: '#/components/schemas/VerifiedClaim'
+        correlation_id:
+          type: string
+        response_time_ms:
+          type: integer
+
+    VerifyErrorResponse:
+      type: object
+      required: [status, error_code, message, correlation_id]
+      properties:
+        status:
+          type: string
+          enum: [error]
+        error_code:
+          type: string
+          enum: [FORMAT_ERROR, NO_CONNECTOR, UNSUPPORTED_TYPE, BAD_REQUEST, INTERNAL_ERROR, REGISTRY_UNAVAILABLE]
+        message:
+          type: string
+        correlation_id:
+          type: string
+        response_time_ms:
+          type: integer
+
+    ProtectSuccessResponse:
+      type: object
+      required: [status, claim, correlation_id, response_time_ms]
+      properties:
+        status:
+          type: string
+          enum: [success]
+        claim:
+          $ref: '#/components/schemas/ProtectedOnlyClaim'
+        correlation_id:
+          type: string
+        response_time_ms:
+          type: integer
+
+    ClaimVerifyValidResponse:
+      type: object
+      required: [status, signature_valid, claim_id, verification_status, signature_key_version]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+        signature_valid:
+          type: boolean
+          enum: [true]
+        claim_id:
+          type: string
+        verification_status:
+          type: string
+        signature_key_version:
+          type: string
+
+    ClaimVerifyInvalidResponse:
+      type: object
+      required: [status, signature_valid, reason, claim_id]
+      properties:
+        status:
+          type: string
+          enum: [error]
+        signature_valid:
+          type: boolean
+          enum: [false]
+        reason:
+          type: string
+        claim_id:
+          type: string
+
+    SigningInfoResponse:
+      type: object
+      required: [algorithm, key_version, issuer]
+      properties:
+        algorithm:
+          type: string
+          example: HS512
+        key_version:
+          type: string
+          example: v1
+        issuer:
+          type: string
+          example: IVS-MTN-01
+
+    HealthResponse:
+      type: object
+      required: [status, service, instance, timestamp, version]
+      properties:
+        status:
+          type: string
+          enum: [healthy]
+        service:
+          type: string
+          example: MTN IVS
+        instance:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+
+# ---------------------------------------------------------------------------
+# Paths
+# ---------------------------------------------------------------------------
+paths:
+
+  /api/v1/identifiers/verify:
+    post:
+      operationId: verifyIdentifier
+      summary: Verify an identifier against the authoritative registry
+      description: |
+        Normalizes the raw identifier, calls the registry connector, generates an
+        HMAC-protected representation, and returns a signed verification claim.
+
+        **CVG contract fields the gateway depends on:**
+        `status`, `claim`, `claim.verification_status`, `claim.claim_id`,
+        `claim.identifier_hmac`, `claim.masked_value`, `claim.fingerprint`,
+        `claim.confirmed_attributes`, `claim.signature`, `correlation_id`,
+        `error_code` (on failure).
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyRequest'
+      responses:
+        '200':
+          description: Verification completed (check `claim.verification_status` for outcome).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifySuccessResponse'
+        '400':
+          description: Invalid format or bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyErrorResponse'
+        '422':
+          description: No connector available for the identifier type.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyErrorResponse'
+        '502':
+          description: Registry unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyErrorResponse'
+
+  /api/v1/identifiers/protect:
+    post:
+      operationId: protectIdentifier
+      summary: Generate a protected representation without registry verification
+      description: |
+        Normalizes and produces HMAC + mask + fingerprint without calling the
+        registry.  Returns a signed `IDENTIFIER_PROTECTED_ONLY` claim.
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProtectRequest'
+      responses:
+        '200':
+          description: Protection successful.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProtectSuccessResponse'
+        '400':
+          description: Invalid format or bad request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyErrorResponse'
+
+  /api/v1/claims/verify:
+    post:
+      operationId: verifyClaim
+      summary: Verify the signature of a previously issued claim
+      description: |
+        Allows CVG or other trusted parties to confirm that a claim was issued
+        by this IVS instance and has not been tampered with.
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClaimVerifyRequest'
+      responses:
+        '200':
+          description: Signature is valid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClaimVerifyValidResponse'
+        '400':
+          description: Signature invalid or missing.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ClaimVerifyInvalidResponse'
+                  - type: object
+                    properties:
+                      status:
+                        type: string
+                      error_code:
+                        type: string
+                      message:
+                        type: string
+
+  /api/v1/claims/signing-info:
+    get:
+      operationId: getSigningInfo
+      summary: Retrieve signing metadata for claim verification configuration
+      description: |
+        Exposes the signing algorithm, key version, and issuer identity.
+        Does **not** expose the signing key itself.
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Signing metadata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SigningInfoResponse'
+
+  /api/v1/health:
+    get:
+      operationId: healthCheck
+      summary: Public health check
+      responses:
+        '200':
+          description: Service is healthy.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /api/v1/connectors/health:
+    get:
+      operationId: connectorHealthCheck
+      summary: Public health check (alias)
+      responses:
+        '200':
+          description: Service is healthy.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /api/v1/connectors/health/connectors:
+    get:
+      operationId: connectorDetailedHealth
+      summary: Detailed connector health status
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Connector health details.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  connectors:
+                    type: object
+                  timestamp:
+                    type: string
+                    format: date-time

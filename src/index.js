@@ -83,11 +83,14 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Internal server error' });
 });
 
-app.listen(config.port, '0.0.0.0', () => {
-  logger.info(`MTN IVS started on port ${config.port}`, {
-    instance: config.ivsInstanceId,
-    environment: config.nodeEnv,
+// Only start the server when run directly (not when require'd by tests)
+if (require.main === module) {
+  app.listen(config.port, '0.0.0.0', () => {
+    logger.info(`MTN IVS started on port ${config.port}`, {
+      instance: config.ivsInstanceId,
+      environment: config.nodeEnv,
+    });
   });
-});
+}
 
 module.exports = app;
