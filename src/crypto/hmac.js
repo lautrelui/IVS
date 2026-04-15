@@ -11,7 +11,7 @@ function generateIdentifierHmac(identifierType, issuerCountry, normalizedValue) 
   const hmac = crypto.createHmac(config.hmac.algorithm, config.hmac.key);
   hmac.update(input);
   return {
-    identifier_hmac: hmac.digest('base64'),
+    identifier_hmac: hmac.digest('hex'),
     key_version: config.hmac.keyVersion,
   };
 }

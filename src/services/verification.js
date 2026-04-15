@@ -109,7 +109,7 @@ async function verifyIdentifier(request) {
     masked_value,
     fingerprint,
     issuer_country,
-    source_registry: connectorResult.source_registry || connector.name,
+    source_registry: `IVS-${identifier_type}-${issuer_country}`,
     verified_at: new Date().toISOString(),
     verified_by: config.ivsInstanceId,
     normalization_version: 'v1',
