@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
-    "test": "node --test test/contract.test.js",
+    "test": "node --test test/",
+    "test:egress": "node --test test/niu-egress.test.js",
     "generate-keys": "node scripts/generate-keys.js"
   },
   "dependencies": {

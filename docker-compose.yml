@@ -16,7 +16,9 @@ services:
       - HMAC_KEY_VERSION=v1
       - SIGNING_KEY=${SIGNING_KEY:-Y2hhbmdlLXRoaXMtc2lnbmluZy1rZXktaW4tcHJvZHVjdGlvbg==}
       - SIGNING_KEY_VERSION=v1
-      - NIU_API_URL=https://api.egovwallet.com/api/kyc/verify
+      # External NIU registry is opt-in. Unset => verify refuses external
+      # lookup (registry_unavailable) and no outbound call is made.
+      - NIU_API_URL=${NIU_API_URL:-}
       - NIU_API_TIMEOUT=30000
       - IVS_INSTANCE_ID=IVS-MTN-01
       - TRUSTED_GATEWAYS=CVG-CTI-01

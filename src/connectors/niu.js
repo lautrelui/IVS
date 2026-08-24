@@ -7,8 +7,33 @@ class NiuConnector extends BaseConnector {
     super('NIU');
   }
 
+  /** True when an explicit external provider URL has been configured. */
+  isExternalLookupEnabled() {
+    return Boolean(config.niu.apiUrl);
+  }
+
   async verify(normalizedValue, issuerCountry, correlationId) {
     this.stats.total++;
+
+    // Fail-closed egress gate. Without an explicit NIU_API_URL there is no
+    // registry to call — refuse deterministically instead of falling back to
+    // a public endpoint. No fetch() is issued on this path.
+    if (!this.isExternalLookupEnabled()) {
+      this.stats.registry_unavailable++;
+      this.lastCheck = new Date().toISOString();
+
+      logger.warn('[NIU_CONNECTOR] External NIU lookup not configured — refusing', {
+        correlation_id: correlationId,
+        issuer_country: issuerCountry,
+      });
+
+      return {
+        status: 'registry_unavailable',
+        message: 'External NIU verification is not configured (NIU_API_URL is unset)',
+        source_registry: 'NIU',
+        external_lookup_enabled: false,
+      };
+    }
 
     try {
       // Dynamic import for fetch (Node 18+ has built-in fetch)
@@ -259,6 +284,7 @@ class NiuConnector extends BaseConnector {
       name: this.name,
       healthy: this.healthy,
       lastCheck: this.lastCheck,
+      external_lookup_enabled: this.isExternalLookupEnabled(),
       stats: this.getStats(),
     };
   }

@@ -29,9 +29,19 @@ const config = {
     algorithm: 'HS512',
   },
 
+  // External NIU registry.
+  //
+  // Fail-closed: there is deliberately no built-in registry URL. An unset
+  // NIU_API_URL must never silently select a public government endpoint, so
+  // external NIU verification is only available when an operator supplies an
+  // explicit provider URL. /api/v1/identifiers/protect is unaffected — it
+  // never contacts a registry.
   niu: {
-    apiUrl: process.env.NIU_API_URL || 'https://api.egovwallet.com/api/kyc/verify',
+    apiUrl: process.env.NIU_API_URL || null,
     apiTimeout: parseInt(process.env.NIU_API_TIMEOUT || '30000', 10),
+    get externalLookupEnabled() {
+      return Boolean(this.apiUrl);
+    },
   },
 
   ivsInstanceId: process.env.IVS_INSTANCE_ID || 'IVS-MTN-01',
